@@ -1,0 +1,18 @@
+{
+    "name": "rbac/admin-api",
+    "description": "Artist and Songs Admin API",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "vlucas/phpdotenv": "^5.6",
+        "firebase/php-jwt": "^6.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
