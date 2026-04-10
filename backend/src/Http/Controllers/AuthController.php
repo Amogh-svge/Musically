@@ -36,11 +36,11 @@ final class AuthController
         return Response::json($result);
     }
 
-    public function me(Request $request): Response
+    public function currentUser(Request $request): Response
     {
         $user = AuthHelper::requireUser($request);
-        $row = $this->authService->me($user);
+        $currentUser = $this->authService->currentUser($user);
 
-        return Response::json(['user' => $row]);
+        return Response::json(['user' => $currentUser]);
     }
 }

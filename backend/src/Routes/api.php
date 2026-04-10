@@ -29,6 +29,7 @@ function dispatch_api(Request $request, array $deps): Response
             continue;
         }
 
+        // Exact match
         if ($routePath === $path) {
             return $handler();
         }
@@ -54,5 +55,6 @@ function getRoutes(array $deps, Request $request): array
         // Auth
         ['POST', "$pathPrefix/auth/register", fn() => $controllers['auth']->register($request)],
         ['POST', "$pathPrefix/auth/login", fn() => $controllers['auth']->login($request)],
+        ['GET',  "$pathPrefix/auth/me", fn() => $controllers['auth']->currentUser($request)],
     ];
 }
