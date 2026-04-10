@@ -60,4 +60,22 @@ final class Request
     {
         return $this->path;
     }
+
+
+    public function getJsonBody(): array
+    {
+        if ($this->body === null || $this->body === '') {
+
+            return [];
+        }
+
+        $data = json_decode($this->body, true);
+
+        if (! is_array($data)) {
+
+            return [];
+        }
+
+        return $data;
+    }
 }

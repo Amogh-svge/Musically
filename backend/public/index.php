@@ -14,3 +14,15 @@ require_once dirname(__DIR__) . '/src/Routes/api.php';
 $debug = filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
 $request = Request::fromGlobals();
+AuthHelper::attachJwtFromBearer($request, $deps['jwt']);
+
+try {
+    $response = $deps['cors']->apply(
+        $request,
+        static fn(Request $r): Response => dispatch_api($r, $deps),
+    );
+} catch (\Throwable $e) {
+    $response = ErrorHandler::toResponse($e, $debug);
+}
+
+$response->send();
