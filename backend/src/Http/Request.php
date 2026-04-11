@@ -61,21 +61,64 @@ final class Request
         return $this->path;
     }
 
+    public function getQuery(): array
+    {
+        return $this->query;
+    }
+
+    public function getQueryString(string $key, ?string $default = null): ?string
+    {
+        $v = $this->query[$key] ?? null;
+
+        return $v !== null ? (string) $v : $default;
+    }
+
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    public function getHeader(string $name): ?string
+    {
+        foreach ($this->headers as $k => $v) {
+            if (strcasecmp($k, $name) === 0) {
+                return $v;
+            }
+        }
+
+        return null;
+    }
+
+    public function getBody(): ?string
+    {
+        return $this->body;
+    }
 
     public function getJsonBody(): array
     {
         if ($this->body === null || $this->body === '') {
-
             return [];
         }
-
         $data = json_decode($this->body, true);
-
         if (! is_array($data)) {
-
             return [];
         }
 
         return $data;
+    }
+
+    public function setAttribute(string $key, mixed $value): void
+    {
+        $this->attributes[$key] = $value;
+    }
+
+    public function getAttribute(string $key, mixed $default = null): mixed
+    {
+        return $this->attributes[$key] ?? $default;
+    }
+
+    public function getAttributes(): array
+    {
+        return $this->attributes;
     }
 }

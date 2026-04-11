@@ -6,36 +6,54 @@ namespace App\Http;
 
 final class CorsMiddleware
 {
-    public function __construct(private readonly string $allowOrigin) {}
+    public function __construct(private readonly array $allowedOrigins) {}
 
     public function apply(Request $request, callable $next): Response
     {
+        $allowOrigin = $this->matchRequestOrigin($request);
         if ($request->getMethod() === 'OPTIONS') {
-            return $this->preflight();
+            return new Response(204, '', $this->corsHeaders($allowOrigin));
         }
         $response = $next($request);
 
-        return $this->withCorsHeaders($response);
+        return $this->withCorsHeaders($response, $allowOrigin);
     }
 
-    private function preflight(): Response
+    private function matchRequestOrigin(Request $request): ?string
     {
-        $headers = $this->corsHeaders();
+        $origin = $request->getHeader('Origin');
+        if ($origin === null || $origin === '') {
+            return null;
+        }
+        foreach ($this->allowedOrigins as $allowed) {
+            $allowed = trim($allowed);
+            if ($allowed !== '' && strcasecmp($allowed, $origin) === 0) {
+                return $origin;
+            }
+        }
 
-        return new Response(204, '', $headers);
+        return null;
     }
 
-    private function withCorsHeaders(Response $response): Response
+    private function withCorsHeaders(Response $response, ?string $allowOrigin): Response
     {
-        $merged = array_merge($response->getHeaders(), $this->corsHeaders());
+        $extra = $this->corsHeaders($allowOrigin);
+        if ($extra === []) {
+            return $response;
+        }
+        $merged = array_merge($response->getHeaders(), $extra);
 
         return new Response($response->getStatusCode(), $response->getBody(), $merged);
     }
 
-    private function corsHeaders(): array
+    private function corsHeaders(?string $allowOrigin): array
     {
+        if ($allowOrigin === null || $allowOrigin === '') {
+            return [];
+        }
+
         return [
-            'Access-Control-Allow-Origin' => $this->allowOrigin,
+            'Access-Control-Allow-Origin' => $allowOrigin,
             'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers' => 'Content-Type, Authorization',
             'Access-Control-Max-Age' => '86400',
