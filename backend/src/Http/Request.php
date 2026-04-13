@@ -121,4 +121,26 @@ final class Request
     {
         return $this->attributes;
     }
+
+    public function getUploadedFile(string $key): ?array
+    {
+        if (! isset($_FILES[$key])) {
+            return null;
+        }
+        $f = $_FILES[$key];
+        if (! is_array($f) || ! isset($f['tmp_name'], $f['error'])) {
+            return null;
+        }
+        if (! is_uploaded_file($f['tmp_name'])) {
+            return null;
+        }
+
+        return [
+            'name' => (string) ($f['name'] ?? ''),
+            'type' => (string) ($f['type'] ?? ''),
+            'tmp_name' => (string) $f['tmp_name'],
+            'error' => (int) $f['error'],
+            'size' => (int) ($f['size'] ?? 0),
+        ];
+    }
 }

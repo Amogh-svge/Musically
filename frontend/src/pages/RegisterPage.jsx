@@ -1,20 +1,45 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useRegisterMutation } from "@/hooks/useAuthMutations";
 import { formatApiError } from "@/utils/displayFormat";
-
-const inputClassName =
-  "w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100";
+import {
+  fieldErrorClassName,
+  inputClassName,
+  inputErrorClassName,
+  labelClassName,
+} from "@/utils/formClasses";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
   const registerMutation = useRegisterMutation();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm({ defaultValues: { name: "", email: "", password: "" } });
+
+  const onSubmit = (values) => {
+    registerMutation.mutate(
+      {
+        name: values.name.trim(),
+        email: values.email.trim(),
+        password: values.password,
+      },
+      {
+        onSuccess: () => {
+          navigate("/login", {
+            replace: true,
+            state: { registered: true },
+          });
+        },
+        onError: (err) => {
+          setError("root", { message: formatApiError(err) });
+        },
+      },
+    );
+  };
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -61,76 +86,67 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {error ? (
+            {errors.root?.message ? (
               <p className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
+                {errors.root.message}
               </p>
             ) : null}
 
             <form
               className="space-y-4 rounded-[2rem] border border-slate-200/70 bg-white p-7 shadow-sm sm:p-8"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setError("");
-                registerMutation.mutate(
-                  { name, email, password },
-                  {
-                    onSuccess: () => {
-                      navigate("/login", {
-                        replace: true,
-                        state: { registered: true },
-                      });
-                    },
-                    onError: (err) => setError(formatApiError(err)),
-                  },
-                );
-              }}
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
             >
-              <label className="block space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                  Full Name
-                </span>
-                <input
-                  className={inputClassName}
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Alexander Thorne"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </label>
+              <div>
+                <label className={`block space-y-2 ${labelClassName}`}>
+                  <span>Full Name</span>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Alexander Thorne"
+                    className={errors.name ? inputErrorClassName : inputClassName}
+                    {...register("name", { required: "Name is required" })}
+                  />
+                </label>
+                {errors.name ? (
+                  <p className={fieldErrorClassName}>{errors.name.message}</p>
+                ) : null}
+              </div>
 
-              <label className="block space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                  Email Address
-                </span>
-                <input
-                  className={inputClassName}
-                  type="email"
-                  autoComplete="email"
-                  placeholder="alex@curator.fm"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </label>
+              <div>
+                <label className={`block space-y-2 ${labelClassName}`}>
+                  <span>Email Address</span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="alex@curator.fm"
+                    className={errors.email ? inputErrorClassName : inputClassName}
+                    {...register("email", { required: "Email is required" })}
+                  />
+                </label>
+                {errors.email ? (
+                  <p className={fieldErrorClassName}>{errors.email.message}</p>
+                ) : null}
+              </div>
 
-              <label className="block space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                  Secure Password
-                </span>
-                <input
-                  className={inputClassName}
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="At least 8 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-              </label>
+              <div>
+                <label className={`block space-y-2 ${labelClassName}`}>
+                  <span>Secure Password</span>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="At least 8 characters"
+                    className={errors.password ? inputErrorClassName : inputClassName}
+                    {...register("password", {
+                      required: "Password is required",
+                      minLength: { value: 8, message: "At least 8 characters" },
+                    })}
+                  />
+                </label>
+                {errors.password ? (
+                  <p className={fieldErrorClassName}>{errors.password.message}</p>
+                ) : null}
+              </div>
 
               <button
                 className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-500 disabled:opacity-60"

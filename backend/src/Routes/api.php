@@ -63,6 +63,7 @@ function getRoutes(array $deps, Request $request): array
         // Auth
         ['POST', "$pathPrefix/auth/register", fn() => $controllers['auth']->register($request)],
         ['POST', "$pathPrefix/auth/login", fn() => $controllers['auth']->login($request)],
+        ['POST', "$pathPrefix/auth/logout", fn() => $controllers['auth']->logout()],
         ['GET',  "$pathPrefix/auth/me", fn() => $controllers['auth']->currentUser($request)],
 
         // Users

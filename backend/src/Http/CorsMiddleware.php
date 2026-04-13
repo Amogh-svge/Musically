@@ -6,7 +6,10 @@ namespace App\Http;
 
 final class CorsMiddleware
 {
-    public function __construct(private readonly array $allowedOrigins) {}
+    public function __construct(
+        private readonly array $allowedOrigins,
+        private readonly bool $allowLocalhostAnyPortInDebug = false,
+    ) {}
 
     public function apply(Request $request, callable $next): Response
     {
@@ -15,6 +18,16 @@ final class CorsMiddleware
             return new Response(204, '', $this->corsHeaders($allowOrigin));
         }
         $response = $next($request);
+
+        return $this->withCorsHeaders($response, $allowOrigin);
+    }
+
+    /**
+     * Attach CORS headers to a response (e.g. error responses built outside {@see apply}).
+     */
+    public function mergeIntoResponse(Request $request, Response $response): Response
+    {
+        $allowOrigin = $this->matchRequestOrigin($request);
 
         return $this->withCorsHeaders($response, $allowOrigin);
     }
@@ -28,6 +41,11 @@ final class CorsMiddleware
         foreach ($this->allowedOrigins as $allowed) {
             $allowed = trim($allowed);
             if ($allowed !== '' && strcasecmp($allowed, $origin) === 0) {
+                return $origin;
+            }
+        }
+        if ($this->allowLocalhostAnyPortInDebug) {
+            if (preg_match('#\Ahttps?://(localhost|127\.0\.0\.1)(:\d+)?\z#i', $origin) === 1) {
                 return $origin;
             }
         }

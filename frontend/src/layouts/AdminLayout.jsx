@@ -1,5 +1,13 @@
 import Icon from "../Icon";
+import { useAuth } from "@/context/AuthContext";
+import {
+  canAccessArtistsSection,
+  canManageUsers,
+  ROLE_TOOLTIP,
+} from "@/constants/roles";
+import { formatRole, initialsFromName } from "@/utils/displayFormat";
 import { NavLink, useNavigate } from "react-router-dom";
+import Avatar from "../components/Avatar";
 
 const navigationItems = [
   {
@@ -7,51 +15,65 @@ const navigationItems = [
     label: "Dashboard",
     icon: "dashboard",
     path: "/dashboard",
-    available: true,
   },
   {
     key: "artists",
     label: "Artists",
     icon: "user",
     path: "/artists",
-    available: true,
+    denyReason: ROLE_TOOLTIP.ARTISTS_NAV,
+    isAllowed: (role) => canAccessArtistsSection(role),
   },
   {
     key: "songs",
     label: "Songs",
     icon: "music",
     path: "/songs",
-    available: true,
   },
   {
     key: "users",
     label: "Users",
     icon: "user",
     path: "/users",
-    available: true,
+    denyReason: ROLE_TOOLTIP.USERS_NAV,
+    isAllowed: (role) => canManageUsers(role),
   },
 ];
 
-function SidebarItem({ item }) {
+function SidebarItem({ item, role, profileLoading }) {
   const baseClassName =
-    "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition";
+    "flex items-center gap-3 rounded-2xl px-4 py-3 mt-2 text-sm font-medium transition";
 
-  if (!item.available) {
+  const restricted = typeof item.isAllowed === "function";
+  const denied =
+    restricted &&
+    !profileLoading &&
+    (role == null || !item.isAllowed(role));
+
+  if (denied) {
     return (
       <li>
-        <span
-          className={`${baseClassName} cursor-not-allowed text-slate-600`}
-          aria-disabled="true"
-        >
-          <Icon name={item.icon} className="size-5" />
-          <span>{item.label}</span>
+        <span className="group relative block">
+          <span
+            className={`${baseClassName} cursor-not-allowed text-slate-500 opacity-60`}
+            aria-disabled="true"
+          >
+            <Icon name={item.icon} className="size-5" />
+            <span>{item.label}</span>
+          </span>
+          <span
+            className="pointer-events-none absolute left-0 top-full z-[60] mt-2 hidden w-64 max-w-[min(18rem,calc(100vw-2rem))] rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-medium leading-snug text-white shadow-lg group-hover:block"
+            role="tooltip"
+          >
+            {item.denyReason}
+          </span>
         </span>
       </li>
     );
   }
 
   return (
-    <span>
+    <li>
       <NavLink
         to={item.path}
         className={({ isActive }) =>
@@ -63,19 +85,25 @@ function SidebarItem({ item }) {
         <Icon name={item.icon} className="size-5" />
         <span>{item.label}</span>
       </NavLink>
-    </span>
+    </li>
   );
 }
 
 export default function AdminLayout({ children, onLogout }) {
   const navigate = useNavigate();
+  const { user, role, isLoading: profileLoading } = useAuth();
+
+  const displayName = profileLoading
+    ? "Loading profile…"
+    : user?.name?.trim() || user?.email || "Signed in";
+  const initials = initialsFromName(user?.name || user?.email || "?");
+  const roleLabel = profileLoading ? "…" : formatRole(role);
 
   return (
     <div className="min-h-screen bg-transparent px-4 py-4 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1440px] flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-[0_25px_80px_rgba(15,23,42,0.12)] backdrop-blur lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="border-b border-slate-200/70 bg-white/85 px-5 py-6 lg:border-b-0 lg:border-r lg:px-6">
-
-          <div className="flex flex-col h-full">
+          <div className="flex h-full flex-col">
             <div className="flex items-center gap-3 px-2">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-base font-semibold text-white shadow-lg shadow-indigo-500/30">
                 SC
@@ -91,32 +119,39 @@ export default function AdminLayout({ children, onLogout }) {
             </div>
 
             <nav className="mt-10">
-              <ul className="menu gap-2 rounded-box bg-transparent p-0">
+              <ul className=" gap-2 rounded-box bg-transparent p-0">
                 {navigationItems.map((item) => (
-                  <SidebarItem key={item.key} item={item} />
+                  <SidebarItem
+                    key={item.key}
+                    item={item}
+                    role={role}
+                    profileLoading={profileLoading}
+                  />
                 ))}
               </ul>
             </nav>
 
-            <div className="mt-auto hidden lg:block">
+            <div className="mt-8 border-t border-slate-200/70 pt-6 lg:mt-auto lg:border-t-0 lg:pt-0">
               <div className="card border border-slate-200/70 bg-white shadow-sm">
                 <div className="card-body gap-4 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="avatar placeholder">
-                      <div className="h-11 w-11 rounded-full bg-slate-900 text-sm font-semibold text-white text-center">
-                        AR
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Alex Rivera</p>
-                      <p className="text-xs text-slate-700">Artist Manager</p>
+                    <Avatar
+                      name={user?.name ?? ""}
+                      size={56}
+                      initials={initials}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {displayName}
+                      </p>
+                      <p className="truncate text-xs text-slate-600">{roleLabel}</p>
                     </div>
                   </div>
                   <button
                     className="btn btn-outline btn-error btn-sm w-full rounded-xl border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
                     type="button"
-                    onClick={() => {
-                      onLogout();
+                    onClick={async () => {
+                      await onLogout();
                       navigate("/login", { replace: true });
                     }}
                   >
@@ -131,79 +166,14 @@ export default function AdminLayout({ children, onLogout }) {
         <div className="flex min-h-0 flex-col">
           <header className="border-b border-slate-200/70 px-5 py-4 sm:px-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <label className="input flex h-13 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 shadow-none lg:max-w-md">
-                <Icon name="search" className="size-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search artists, metadata, or logs..."
-                  className="grow text-sm"
-                />
-              </label>
-
-              <button
-                className="btn btn-circle border-none bg-slate-100 text-slate-500 shadow-none hover:bg-slate-200 hover:text-slate-700"
-                type="button"
-                aria-label="Notifications"
-              >
-                <Icon name="bell" className="size-5" />
-              </button>
+              <div className="input flex h-13 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 shadow-none lg:max-w-md">
+                <Icon name="music" className="size-5 text-slate-400" />
+                <p className="text-sm font-semibold text-slate-900">Go Through the Data</p>
+              </div>
             </div>
           </header>
 
           <main className="flex-1 overflow-auto px-5 py-6 sm:px-8">{children}</main>
-
-          <footer className="border-t border-slate-200/70 bg-white/90 px-5 py-4 sm:px-8">
-            <div className="card rounded-[1.75rem] border border-white/80 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.08)]">
-              <div className="card-body flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-4">
-                  <button
-                    className="btn btn-circle h-14 min-h-14 w-14 border-none bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:bg-indigo-500"
-                    type="button"
-                  >
-                    <Icon name="play" className="size-6" />
-                  </button>
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-indigo-500">
-                      Currently Curating
-                    </p>
-                    <p className="text-base font-semibold text-slate-900">
-                      Midnight in Berlin (Edit)
-                    </p>
-                    <p className="text-sm text-slate-500">Luna Trace - Dark Synth EP</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-1 items-center gap-4 lg:max-w-xl">
-                  <span className="text-xs text-slate-400">1:45</span>
-                  <div className="h-1.5 flex-1 rounded-full bg-slate-200">
-                    <div className="h-1.5 w-1/2 rounded-full bg-indigo-500" />
-                  </div>
-                  <span className="text-xs text-slate-400">3:24</span>
-                </div>
-
-                <div className="flex items-center gap-2 text-slate-500">
-                  <button className="btn btn-circle btn-ghost" type="button">
-                    <Icon name="expand" className="size-5" />
-                  </button>
-                  <button className="btn btn-circle btn-ghost" type="button">
-                    <Icon name="previous" className="size-5" />
-                  </button>
-                  <button
-                    className="btn btn-circle border-none bg-indigo-600 text-white hover:bg-indigo-500"
-                    type="button"
-                  >
-                    <Icon name="pause" className="size-5" />
-                  </button>
-                  <button className="btn btn-circle btn-ghost" type="button">
-                    <Icon name="next" className="size-5" />
-                  </button>
-                  <button className="btn btn-circle btn-ghost" type="button">
-                    <Icon name="volume" className="size-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </footer>
         </div>
       </div>
     </div>

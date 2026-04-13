@@ -26,7 +26,9 @@ final class AuthHelper
     {
         $user = $request->getAttribute('auth_user');
         if (! $user instanceof AuthUser) {
-            throw new UnauthorizedException('Unauthorized');
+            throw new UnauthorizedException(
+                'Authentication required. Sign in and send a valid Bearer token in the Authorization header.'
+            );
         }
 
         return $user;

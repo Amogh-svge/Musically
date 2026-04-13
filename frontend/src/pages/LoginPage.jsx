@@ -1,41 +1,44 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { formatApiError } from "@/utils/displayFormat";
+import {
+  fieldErrorClassName,
+  inputClassName,
+  inputErrorClassName,
+  labelClassName,
+} from "@/utils/formClasses";
 import { useLoginMutation } from "../hooks/useAuthMutations";
-
-const inputClassName =
-  "w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const nextPath = location.state?.from?.pathname ?? "/artists";
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const nextPath = location.state?.from?.pathname ?? "/dashboard";
 
   const loginMutation = useLoginMutation();
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    try {
-      setError("");
-      loginMutation.mutate({ email, password },
-        {
-          onSuccess: (data) => {
-            if (!data?.token) {
-              setError("Invalid response from server.");
-              return;
-            }
-            navigate(nextPath, { replace: true });
-          },
-          onError: (err) => setError(formatApiError(err)),
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm({ defaultValues: { email: "", password: "" } });
+
+  const onSubmit = (values) => {
+    loginMutation.mutate(
+      { email: values.email.trim(), password: values.password },
+      {
+        onSuccess: (data) => {
+          if (!data?.token) {
+            setError("root", { message: "Invalid response from server." });
+            return;
+          }
+          navigate(nextPath, { replace: true });
         },
-      );
-    } catch (error) {
-      setError(formatApiError(error));
-    }
+        onError: (err) => {
+          setError("root", { message: formatApiError(err) });
+        },
+      },
+    );
   };
 
   return (
@@ -72,56 +75,53 @@ export default function LoginPage() {
                 </p>
               ) : null}
 
-              {error ? (
+              {errors.root?.message ? (
                 <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {error}
+                  {errors.root.message}
                 </p>
               ) : null}
 
-              <form className="space-y-4" onSubmit={handleLogin}>
-                <label className="block space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Email
-                  </span>
-                  <input
-                    className={inputClassName}
-                    type="email"
-                    autoComplete="email"
-                    placeholder="alex@curator.fm"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </label>
+              <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+                <div>
+                  <label className={`block space-y-2 ${labelClassName}`}>
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      placeholder="Enter your email"
+                      className={errors.email ? inputErrorClassName : inputClassName}
+                      {...register("email", {
+                        required: "Email is required",
+                      })}
+                    />
+                  </label>
+                  {errors.email ? (
+                    <p className={fieldErrorClassName}>{errors.email.message}</p>
+                  ) : null}
+                </div>
 
-                <label className="block space-y-2">
-                  <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    <span>Password</span>
-                    <button
-                      className="normal-case tracking-normal text-indigo-600 transition hover:text-indigo-500"
-                      type="button"
-                    >
-                      Forgot?
-                    </button>
-                  </span>
-                  <input
-                    className={inputClassName}
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </label>
+                <div>
+                  <label className={`flex flex-col space-y-2 ${labelClassName}`}>
+                    <span className="flex items-center justify-between normal-case">
+                      <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                        Password
+                      </span>
+                    </span>
+                    <input
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                      className={errors.password ? inputErrorClassName : inputClassName}
+                      {...register("password", {
+                        required: "Password is required",
+                      })}
+                    />
+                  </label>
+                  {errors.password ? (
+                    <p className={fieldErrorClassName}>{errors.password.message}</p>
+                  ) : null}
+                </div>
 
-                <label className="flex items-center gap-3 text-sm text-slate-500">
-                  <input
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    type="checkbox"
-                  />
-                  <span>Stay signed in</span>
-                </label>
 
                 <button
                   className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-500 disabled:opacity-60"
