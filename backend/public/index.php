@@ -23,6 +23,7 @@ try {
     );
 } catch (\Throwable $e) {
     $response = ErrorHandler::toResponse($e, $debug);
+    $response = $deps['cors']->mergeIntoResponse($request, $response);
 }
 
 $response->send();

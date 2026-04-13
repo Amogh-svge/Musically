@@ -43,4 +43,14 @@ final class AuthController
 
         return Response::json(['user' => $currentUser]);
     }
+
+    /**
+     * Stateless JWT: nothing is revoked server-side. Clients should discard the token after this call.
+     */
+    public function logout(): Response
+    {
+        return Response::json([
+            'message' => 'Signed out. This API does not store sessions; remove the token in your app (local storage, etc.).',
+        ]);
+    }
 }

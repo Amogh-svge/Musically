@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import ArtistsPage from "./pages/ArtistsPage";
+import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./ProtectedRoute";
 import RegisterPage from "./pages/RegisterPage";
+import SongsPage from "./pages/SongsPage";
 import UsersPage from "./pages/UsersPage";
+import { logoutUser } from "./api/api";
+import { queryClient } from "./query/queryClient";
 import {
   AUTH_TOKEN_STORAGE_KEY,
   clearAuthToken,
@@ -14,7 +18,7 @@ import {
 
 export default function App() {
   const [hasSession, setHasSession] = useState(() => Boolean(getAuthToken()));
-  const defaultProtectedPath = "/artists";
+  const defaultProtectedPath = "/dashboard";
   const defaultPublicPath = "/login";
 
   useEffect(() => {
@@ -34,9 +38,18 @@ export default function App() {
     };
   }, []);
 
-  const logout = useCallback(() => {
-    clearAuthToken();
-    notifyAuthChanged();
+  const logout = useCallback(async () => {
+    try {
+      if (getAuthToken()) {
+        await logoutUser();
+      }
+    } catch {
+      /* still clear local session if the request fails */
+    } finally {
+      clearAuthToken();
+      queryClient.clear();
+      notifyAuthChanged();
+    }
   }, []);
 
   const isAuthenticated = hasSession;
@@ -75,6 +88,17 @@ export default function App() {
         }
       />
       <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute
+            isAllowed={isAuthenticated}
+            redirectPath={defaultPublicPath}
+          >
+            <DashboardPage onLogout={logout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/artists"
         element={
           <ProtectedRoute
@@ -93,6 +117,17 @@ export default function App() {
             redirectPath={defaultPublicPath}
           >
             <UsersPage onLogout={logout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/songs"
+        element={
+          <ProtectedRoute
+            isAllowed={isAuthenticated}
+            redirectPath={defaultPublicPath}
+          >
+            <SongsPage onLogout={logout} />
           </ProtectedRoute>
         }
       />
