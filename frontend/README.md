@@ -3,6 +3,18 @@
 React 18 single-page app for the RBAC admin UI:
 The API lives in **`../backend`**. This app only talks to it over HTTP (JSON + multipart for CSV upload).
 
+### Sample CSV for import
+
+The repository includes a ready-made file you can use to try **Artists → Import** (needs **artist_manager** or super admin):
+
+| Detail | Value |
+| :--- | :--- |
+| **File name** | `artists.csv` |
+| **Where it lives** | **Project root** — the folder that contains `frontend/` and `backend/` (not inside `frontend/`) |
+| **Path from this folder** | `../artists.csv` |
+
+Open that path in your file manager or IDE, then choose it in the import modal.
+
 ---
 
 ## What you need
@@ -75,7 +87,7 @@ Use a user that exists in the database:
 
 - **React Hook Form** on login, register, and all admin modals (validation + less boilerplate).
 - **Modals:** add/edit artist, import CSV (artists), add user, add song.
-- **CSV:** export downloads `artists.csv`; import opens a modal with file picker (multipart `file` field). A sample file **`artists.csv`** is in the **repository root** (the folder above `frontend/`) so you can import it without creating your own CSV first.
+- **CSV:** export downloads `artists.csv`; import opens a modal with file picker (multipart `file` field). A sample **`artists.csv`** is included — see **Sample CSV for import** above.
 - **TanStack Query** for caching and refetch after mutations.
 
 ---
