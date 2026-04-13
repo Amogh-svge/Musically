@@ -26,7 +26,9 @@ final class UserService
     private function requireSuperAdmin(AuthUser $actor): void
     {
         if ($actor->role !== Role::SUPER_ADMIN) {
-            throw new ForbiddenException('Forbidden');
+            throw new ForbiddenException(
+                'This action is only available to super administrators. Your account does not have permission to manage users.'
+            );
         }
     }
 

@@ -32,6 +32,13 @@ export function formatRole(role) {
   return String(role).replaceAll("_", " ");
 }
 
+export function formatSongGenre(genre) {
+  if (!genre) return "—";
+  const currentGenre = String(genre).toLowerCase();
+  if (currentGenre === "rnb") return "R&B";
+  return currentGenre.charAt(0).toUpperCase() + currentGenre.slice(1);
+}
+
 export function formatApiError(error) {
   const data = error?.response?.data;
   if (Array.isArray(data?.errors)) {

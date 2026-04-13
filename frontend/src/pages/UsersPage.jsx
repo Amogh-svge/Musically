@@ -1,19 +1,30 @@
 import { useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import Icon from "../Icon";
-import { useUsersQuery } from "@/hooks/useUsersApi";
+import RestrictedAction from "@/components/RestrictedAction";
+import UserFormModal from "@/components/modals/UserFormModal";
+import { canManageUsers, ROLE_TOOLTIP } from "@/constants/roles";
+import { useAuth } from "@/context/AuthContext";
+import { useDeleteUserMutation, useUsersQuery } from "@/hooks/useUsersApi";
 import {
   accentForIndex,
   formatApiError,
   formatRole,
   initialsFromName,
 } from "@/utils/displayFormat";
+import Avatar from "../components/Avatar";
 
 export default function UsersPage({ onLogout }) {
+  const { role, isLoading: profileLoading } = useAuth();
+  const canAdminUsers = profileLoading || canManageUsers(role);
+
   const [page, setPage] = useState(1);
   const perPage = 15;
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [banner, setBanner] = useState("");
 
   const { data, isPending, isError, error } = useUsersQuery(page, perPage);
+  const deleteMutation = useDeleteUserMutation();
 
   const users = data?.data ?? [];
   const meta = data?.meta;
@@ -22,9 +33,19 @@ export default function UsersPage({ onLogout }) {
   const from = total === 0 ? 0 : (page - 1) * perPage + 1;
   const to = Math.min(page * perPage, total);
 
+  const handleDelete = (user) => {
+    if (!window.confirm(`Delete user “${user.name}” (${user.email})?`)) return;
+    setBanner("");
+    deleteMutation.mutate(user.id, {
+      onError: (err) => setBanner(formatApiError(err)),
+    });
+  };
+
   return (
     <AdminLayout onLogout={onLogout}>
       <div className="space-y-6">
+        <UserFormModal open={userModalOpen} onClose={() => setUserModalOpen(false)} />
+
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="space-y-3">
             <div className="breadcrumbs p-0 text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
@@ -38,36 +59,34 @@ export default function UsersPage({ onLogout }) {
                 Users
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-                Super admin only. Data loads from{" "}
-                <span className="font-medium text-slate-700">GET /users</span>.
+                Super admin only. Create users from this screen; CSV import/export for users is
+                not implemented in the API yet.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              className="btn rounded-2xl border-none bg-slate-100 px-5 text-slate-700 shadow-none hover:bg-slate-200"
-              type="button"
-            >
-              <Icon name="import" className="size-5" />
-              Import CSV
-            </button>
-            <button
-              className="btn rounded-2xl border-none bg-slate-100 px-5 text-slate-700 shadow-none hover:bg-slate-200"
-              type="button"
-            >
-              <Icon name="download" className="size-5" />
-              Export
-            </button>
-            <button
-              className="btn btn-primary rounded-2xl border-none bg-indigo-600 px-5 text-white shadow-lg shadow-indigo-500/30 hover:bg-indigo-500"
-              type="button"
-            >
-              <Icon name="plus" className="size-5" />
-              Add User
-            </button>
+            <RestrictedAction allowed={canAdminUsers} reason={ROLE_TOOLTIP.USERS_MUTATE}>
+              <button
+                className="btn btn-primary rounded-2xl border-none bg-indigo-600 px-5 text-white shadow-lg shadow-indigo-500/30 hover:bg-indigo-500"
+                type="button"
+                onClick={() => {
+                  setBanner("");
+                  setUserModalOpen(true);
+                }}
+              >
+                <Icon name="plus" className="size-5" />
+                Add User
+              </button>
+            </RestrictedAction>
           </div>
         </div>
+
+        {banner ? (
+          <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {banner}
+          </p>
+        ) : null}
 
         <div className="card border border-slate-200/70 bg-white shadow-sm">
           <div className="card-body p-0">
@@ -87,9 +106,7 @@ export default function UsersPage({ onLogout }) {
                       <th className="bg-transparent px-6 py-5 font-semibold">User</th>
                       <th className="bg-transparent px-6 py-5 font-semibold">Joined</th>
                       <th className="bg-transparent px-6 py-5 font-semibold">Role</th>
-                      <th className="bg-transparent px-6 py-5 font-semibold">
-                        Artist ID
-                      </th>
+
                       <th className="bg-transparent px-6 py-5 text-right font-semibold">
                         Actions
                       </th>
@@ -109,13 +126,8 @@ export default function UsersPage({ onLogout }) {
                         >
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-4">
-                              <div className="avatar placeholder">
-                                <div
-                                  className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-sm font-semibold text-white`}
-                                >
-                                  {initials}
-                                </div>
-                              </div>
+                              <Avatar name={user.name} size={56} accent={accent} initials={initials} />
+
                               <div>
                                 <p className="text-base font-semibold text-slate-900">
                                   {user.name}
@@ -123,6 +135,7 @@ export default function UsersPage({ onLogout }) {
                                 <p className="text-sm text-slate-500">{user.email}</p>
                               </div>
                             </div>
+
                           </td>
                           <td className="px-6 py-5 text-sm text-slate-600">{joined}</td>
                           <td className="px-6 py-5">
@@ -130,32 +143,23 @@ export default function UsersPage({ onLogout }) {
                               {formatRole(user.role)}
                             </span>
                           </td>
-                          <td className="px-6 py-5 text-sm text-slate-600">
-                            {user.artist_id != null ? user.artist_id : "—"}
-                          </td>
+
                           <td className="px-6 py-5">
                             <div className="flex items-center justify-end gap-2">
-                              <button
-                                className="btn btn-circle btn-ghost text-indigo-600 hover:bg-indigo-50 hover:text-indigo-600"
-                                type="button"
-                                aria-label={`Open ${user.name}`}
+                              <RestrictedAction
+                                allowed={canAdminUsers}
+                                reason={ROLE_TOOLTIP.USERS_MUTATE}
                               >
-                                <Icon name="external" className="size-5" />
-                              </button>
-                              <button
-                                className="btn btn-circle btn-ghost text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                                type="button"
-                                aria-label={`Edit ${user.name}`}
-                              >
-                                <Icon name="details" className="size-5" />
-                              </button>
-                              <button
-                                className="btn btn-circle btn-ghost text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                                type="button"
-                                aria-label={`Delete ${user.name}`}
-                              >
-                                <Icon name="trash" className="size-5" />
-                              </button>
+                                <button
+                                  className="btn btn-circle btn-ghost bg-transparent text-rose-500 hover:bg-rose-50 hover:text-rose-600 border-none shadow-none"
+                                  type="button"
+                                  aria-label={`Delete ${user.name}`}
+                                  disabled={deleteMutation.isPending}
+                                  onClick={() => handleDelete(user)}
+                                >
+                                  <Icon name="trash" className="size-5" />
+                                </button>
+                              </RestrictedAction>
                             </div>
                           </td>
                         </tr>
